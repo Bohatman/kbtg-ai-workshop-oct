@@ -5,6 +5,9 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Min;
+
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "users")
@@ -22,16 +25,31 @@ public class User {
 
     @Column(nullable = false)
     @Schema(
-        description = "User's full name",
-        example = "สมชาย ใจดี",
+        description = "User's first name",
+        example = "สมชาย",
         required = true
     )
     @NotBlank
-    private String name;
+    private String firstName;
+
+    @Column(nullable = false)
+    @Schema(
+        description = "User's last name",
+        example = "ใจดี",
+        required = true
+    )
+    @NotBlank
+    private String lastName;
+
+    @Schema(
+        description = "User's phone number",
+        example = "081-234-5678"
+    )
+    private String phone;
 
     @Column(nullable = false, unique = true)
     @Schema(
-        description = "User's email address",
+        description = "User's email address (unique)",
         example = "somchai@example.com",
         required = true
     )
@@ -39,36 +57,86 @@ public class User {
     @NotBlank
     private String email;
 
+    @Column(nullable = false)
     @Schema(
-        description = "User's age",
-        example = "30",
-        minimum = "18",
-        maximum = "100"
+        description = "Date when user became a member",
+        example = "2024-01-15T10:30:00"
     )
-    private Integer age;
+    private LocalDateTime memberSince;
 
+    @Column(nullable = false)
     @Schema(
-        description = "User's phone number",
-        example = "081-234-5678"
+        description = "User's membership level",
+        example = "GOLD",
+        allowableValues = {"BRONZE", "SILVER", "GOLD", "PLATINUM"}
     )
-    private String phoneNumber;
+    @Enumerated(EnumType.STRING)
+    private MembershipLevel membershipLevel;
+
+    @Column(nullable = false)
+    @Schema(
+        description = "Current points balance",
+        example = "1500",
+        minimum = "0"
+    )
+    @Min(0)
+    private Integer points;
+
+    @Column(nullable = false, updatable = false)
+    @Schema(
+        description = "Record creation timestamp",
+        example = "2024-01-15T10:30:00"
+    )
+    private LocalDateTime createdAt;
+
+    @Column(nullable = false)
+    @Schema(
+        description = "Record last update timestamp",
+        example = "2024-01-15T15:45:30"
+    )
+    private LocalDateTime updatedAt;
+
+    // Enum for membership levels
+    public enum MembershipLevel {
+        BRONZE, SILVER, GOLD, PLATINUM
+    }
 
     // Constructors
     public User() {}
 
-    public User(String name, String email, Integer age, String phoneNumber) {
-        this.name = name;
+    public User(String firstName, String lastName, String phone, String email, 
+                MembershipLevel membershipLevel, Integer points) {
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.phone = phone;
         this.email = email;
-        this.age = age;
-        this.phoneNumber = phoneNumber;
+        this.memberSince = LocalDateTime.now();
+        this.membershipLevel = membershipLevel != null ? membershipLevel : MembershipLevel.BRONZE;
+        this.points = points != null ? points : 0;
+        this.createdAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now();
     }
 
-    public User(Long id, String name, String email, Integer age, String phoneNumber) {
-        this.id = id;
-        this.name = name;
-        this.email = email;
-        this.age = age;
-        this.phoneNumber = phoneNumber;
+    // JPA lifecycle callbacks
+    @PrePersist
+    protected void onCreate() {
+        LocalDateTime now = LocalDateTime.now();
+        this.createdAt = now;
+        this.updatedAt = now;
+        if (this.memberSince == null) {
+            this.memberSince = now;
+        }
+        if (this.membershipLevel == null) {
+            this.membershipLevel = MembershipLevel.BRONZE;
+        }
+        if (this.points == null) {
+            this.points = 0;
+        }
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        this.updatedAt = LocalDateTime.now();
     }
 
     // Getters and Setters
@@ -80,12 +148,28 @@ public class User {
         this.id = id;
     }
 
-    public String getName() {
-        return name;
+    public String getFirstName() {
+        return firstName;
     }
 
-    public void setName(String name) {
-        this.name = name;
+    public void setFirstName(String firstName) {
+        this.firstName = firstName;
+    }
+
+    public String getLastName() {
+        return lastName;
+    }
+
+    public void setLastName(String lastName) {
+        this.lastName = lastName;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
+    public void setPhone(String phone) {
+        this.phone = phone;
     }
 
     public String getEmail() {
@@ -96,19 +180,65 @@ public class User {
         this.email = email;
     }
 
-    public Integer getAge() {
-        return age;
+    public LocalDateTime getMemberSince() {
+        return memberSince;
     }
 
-    public void setAge(Integer age) {
-        this.age = age;
+    public void setMemberSince(LocalDateTime memberSince) {
+        this.memberSince = memberSince;
     }
 
-    public String getPhoneNumber() {
-        return phoneNumber;
+    public MembershipLevel getMembershipLevel() {
+        return membershipLevel;
     }
 
-    public void setPhoneNumber(String phoneNumber) {
-        this.phoneNumber = phoneNumber;
+    public void setMembershipLevel(MembershipLevel membershipLevel) {
+        this.membershipLevel = membershipLevel;
+    }
+
+    public Integer getPoints() {
+        return points;
+    }
+
+    public void setPoints(Integer points) {
+        this.points = points;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
+    // Helper method to get full name
+    public String getFullName() {
+        return firstName + " " + lastName;
+    }
+
+    // Helper method to add points
+    public void addPoints(Integer pointsToAdd) {
+        if (pointsToAdd != null && pointsToAdd > 0) {
+            this.points = (this.points != null ? this.points : 0) + pointsToAdd;
+        }
+    }
+
+    // Helper method to deduct points
+    public boolean deductPoints(Integer pointsToDeduct) {
+        if (pointsToDeduct != null && pointsToDeduct > 0 && 
+            this.points != null && this.points >= pointsToDeduct) {
+            this.points -= pointsToDeduct;
+            return true;
+        }
+        return false;
     }
 }

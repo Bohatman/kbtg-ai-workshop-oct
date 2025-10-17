@@ -48,10 +48,15 @@ public class UserController {
                           "data": [
                             {
                               "id": 1,
-                              "name": "สมชาย ใจดี",
+                              "firstName": "สมชาย",
+                              "lastName": "ใจดี",
+                              "phone": "081-234-5678",
                               "email": "somchai@example.com",
-                              "age": 30,
-                              "phoneNumber": "081-234-5678"
+                              "memberSince": "2024-01-15T10:30:00",
+                              "membershipLevel": "GOLD",
+                              "points": 1500,
+                              "createdAt": "2024-01-15T10:30:00",
+                              "updatedAt": "2024-01-15T10:30:00"
                             }
                           ]
                         }
@@ -92,10 +97,15 @@ public class UserController {
                           "message": "User found",
                           "data": {
                             "id": 1,
-                            "name": "สมชาย ใจดี",
+                            "firstName": "สมชาย",
+                            "lastName": "ใจดี",
+                            "phone": "081-234-5678",
                             "email": "somchai@example.com",
-                            "age": 30,
-                            "phoneNumber": "081-234-5678"
+                            "memberSince": "2024-01-15T10:30:00",
+                            "membershipLevel": "GOLD",
+                            "points": 1500,
+                            "createdAt": "2024-01-15T10:30:00",
+                            "updatedAt": "2024-01-15T10:30:00"
                           }
                         }
                         """
@@ -163,10 +173,15 @@ public class UserController {
                           "message": "User created successfully",
                           "data": {
                             "id": 1,
-                            "name": "สมชาย ใจดี",
+                            "firstName": "สมชาย",
+                            "lastName": "ใจดี",
+                            "phone": "081-234-5678",
                             "email": "somchai@example.com",
-                            "age": 30,
-                            "phoneNumber": "081-234-5678"
+                            "memberSince": "2024-01-15T10:30:00",
+                            "membershipLevel": "BRONZE",
+                            "points": 0,
+                            "createdAt": "2024-01-15T10:30:00",
+                            "updatedAt": "2024-01-15T10:30:00"
                           }
                         }
                         """
@@ -206,10 +221,12 @@ public class UserController {
                         summary = "Example with all user fields",
                         value = """
                             {
-                              "name": "สมชาย ใจดี",
+                              "firstName": "สมชาย",
+                              "lastName": "ใจดี",
+                              "phone": "081-234-5678",
                               "email": "somchai@example.com",
-                              "age": 30,
-                              "phoneNumber": "081-234-5678"
+                              "membershipLevel": "SILVER",
+                              "points": 100
                             }
                             """
                     ),
@@ -218,7 +235,8 @@ public class UserController {
                         summary = "Example with required fields only",
                         value = """
                             {
-                              "name": "สมศรี สุขใจ",
+                              "firstName": "สมศรี",
+                              "lastName": "สุขใจ",
                               "email": "somsri@example.com"
                             }
                             """
@@ -260,10 +278,15 @@ public class UserController {
                           "message": "User updated successfully",
                           "data": {
                             "id": 1,
-                            "name": "สมชาย ใจดี (แก้ไข)",
+                            "firstName": "สมชาย",
+                            "lastName": "ใจดี (แก้ไข)",
+                            "phone": "081-234-5678",
                             "email": "somchai.updated@example.com",
-                            "age": 31,
-                            "phoneNumber": "081-234-5678"
+                            "memberSince": "2024-01-15T10:30:00",
+                            "membershipLevel": "GOLD",
+                            "points": 2000,
+                            "createdAt": "2024-01-15T10:30:00",
+                            "updatedAt": "2024-01-15T15:45:30"
                           }
                         }
                         """
@@ -305,10 +328,12 @@ public class UserController {
                     summary = "Example of user update data",
                     value = """
                         {
-                          "name": "สมชาย ใจดี (แก้ไข)",
+                          "firstName": "สมชาย",
+                          "lastName": "ใจดี (แก้ไข)",
+                          "phone": "081-234-5678",
                           "email": "somchai.updated@example.com",
-                          "age": 31,
-                          "phoneNumber": "081-234-5678"
+                          "membershipLevel": "GOLD",
+                          "points": 2000
                         }
                         """
                 )
@@ -396,6 +421,51 @@ public class UserController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ApiResponse.error("Failed to delete user: " + e.getMessage()));
+        }
+    }
+
+    // Additional endpoints for points management
+    @Operation(
+        summary = "Add points to user",
+        description = "Add points to a user's account"
+    )
+    @PostMapping("/{id}/points/add")
+    public ResponseEntity<ApiResponse<User>> addPoints(
+        @Parameter(description = "User ID", example = "1")
+        @PathVariable Long id,
+        @Parameter(description = "Points to add", example = "100")
+        @RequestParam Integer points
+    ) {
+        try {
+            User updatedUser = userService.addPoints(id, points);
+            return ResponseEntity.ok(
+                ApiResponse.success("Points added successfully", updatedUser)
+            );
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    @Operation(
+        summary = "Deduct points from user",
+        description = "Deduct points from a user's account"
+    )
+    @PostMapping("/{id}/points/deduct")
+    public ResponseEntity<ApiResponse<User>> deductPoints(
+        @Parameter(description = "User ID", example = "1")
+        @PathVariable Long id,
+        @Parameter(description = "Points to deduct", example = "50")
+        @RequestParam Integer points
+    ) {
+        try {
+            User updatedUser = userService.deductPoints(id, points);
+            return ResponseEntity.ok(
+                ApiResponse.success("Points deducted successfully", updatedUser)
+            );
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.error(e.getMessage()));
         }
     }
 }
