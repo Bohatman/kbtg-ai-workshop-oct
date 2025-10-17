@@ -1,32 +1,38 @@
 package com.example.swagger.model;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
+@Entity
+@Table(name = "users")
 @Schema(description = "User details for registration")
 public class User {
 
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Schema(
         description = "Unique identifier for the user",
         example = "123",
         required = true
     )
-    @NotNull
     private Long id;
 
+    @Column(nullable = false)
     @Schema(
         description = "User's full name",
-        example = "John Doe",
+        example = "สมชาย ใจดี",
         required = true
     )
     @NotBlank
     private String name;
 
+    @Column(nullable = false, unique = true)
     @Schema(
         description = "User's email address",
-        example = "john.doe@example.com",
+        example = "somchai@example.com",
         required = true
     )
     @Email
@@ -43,12 +49,19 @@ public class User {
 
     @Schema(
         description = "User's phone number",
-        example = "+1-555-123-4567"
+        example = "081-234-5678"
     )
     private String phoneNumber;
 
     // Constructors
     public User() {}
+
+    public User(String name, String email, Integer age, String phoneNumber) {
+        this.name = name;
+        this.email = email;
+        this.age = age;
+        this.phoneNumber = phoneNumber;
+    }
 
     public User(Long id, String name, String email, Integer age, String phoneNumber) {
         this.id = id;

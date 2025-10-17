@@ -2,6 +2,7 @@ package com.example.swagger.controller;
 
 import com.example.swagger.dto.ApiResponse;
 import com.example.swagger.model.User;
+import com.example.swagger.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -10,20 +11,25 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 @RestController
-@RequestMapping("/api/users")
-@Tag(name = "User Management", description = "APIs for managing user data")
+@RequestMapping("/users")
+@Tag(name = "User Management", description = "APIs for managing user data with SQLite database")
 public class UserController {
+
+    @Autowired
+    private UserService userService;
 
     @Operation(
         summary = "Get all users",
-        description = "Retrieve a list of all users in the system. This endpoint returns user information including their personal details."
+        description = "Retrieve a list of all users from the SQLite database"
     )
     @ApiResponses(value = {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(
@@ -35,7 +41,6 @@ public class UserController {
                 examples = @ExampleObject(
                     name = "Successful Response",
                     summary = "Example of successful user retrieval",
-                    description = "This example shows a successful response when fetching all users",
                     value = """
                         {
                           "status": "success",
@@ -43,17 +48,10 @@ public class UserController {
                           "data": [
                             {
                               "id": 1,
-                              "name": "John Doe",
-                              "email": "john.doe@example.com",
+                              "name": "สมชาย ใจดี",
+                              "email": "somchai@example.com",
                               "age": 30,
-                              "phoneNumber": "+1-555-123-4567"
-                            },
-                            {
-                              "id": 2,
-                              "name": "Jane Smith",
-                              "email": "jane.smith@example.com",
-                              "age": 28,
-                              "phoneNumber": "+1-555-987-6543"
+                              "phoneNumber": "081-234-5678"
                             }
                           ]
                         }
@@ -64,19 +62,20 @@ public class UserController {
     })
     @GetMapping
     public ResponseEntity<ApiResponse<List<User>>> getAllUsers() {
-        List<User> users = Arrays.asList(
-            new User(1L, "John Doe", "john.doe@example.com", 30, "+1-555-123-4567"),
-            new User(2L, "Jane Smith", "jane.smith@example.com", 28, "+1-555-987-6543")
-        );
-        
-        return ResponseEntity.ok(
-            ApiResponse.success("Users retrieved successfully", users)
-        );
+        try {
+            List<User> users = userService.getAllUsers();
+            return ResponseEntity.ok(
+                ApiResponse.success("Users retrieved successfully", users)
+            );
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(ApiResponse.error("Failed to retrieve users: " + e.getMessage()));
+        }
     }
 
     @Operation(
         summary = "Get user by ID",
-        description = "Retrieve a specific user by their unique identifier"
+        description = "Retrieve a specific user by their unique identifier from SQLite database"
     )
     @ApiResponses(value = {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(
@@ -93,10 +92,10 @@ public class UserController {
                           "message": "User found",
                           "data": {
                             "id": 1,
-                            "name": "John Doe",
-                            "email": "john.doe@example.com",
+                            "name": "สมชาย ใจดี",
+                            "email": "somchai@example.com",
                             "age": 30,
-                            "phoneNumber": "+1-555-123-4567"
+                            "phoneNumber": "081-234-5678"
                           }
                         }
                         """
@@ -131,17 +130,23 @@ public class UserController {
         )
         @PathVariable Long id
     ) {
-        if (id == 1L) {
-            User user = new User(1L, "John Doe", "john.doe@example.com", 30, "+1-555-123-4567");
-            return ResponseEntity.ok(ApiResponse.success("User found", user));
-        } else {
-            return ResponseEntity.notFound().build();
+        try {
+            Optional<User> user = userService.getUserById(id);
+            if (user.isPresent()) {
+                return ResponseEntity.ok(ApiResponse.success("User found", user.get()));
+            } else {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.error("User not found with ID: " + id));
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(ApiResponse.error("Failed to retrieve user: " + e.getMessage()));
         }
     }
 
     @Operation(
         summary = "Create a new user",
-        description = "Create a new user in the system with the provided information"
+        description = "Create a new user in the SQLite database"
     )
     @ApiResponses(value = {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(
@@ -157,11 +162,11 @@ public class UserController {
                           "status": "success",
                           "message": "User created successfully",
                           "data": {
-                            "id": 3,
-                            "name": "Alice Johnson",
-                            "email": "alice.johnson@example.com",
-                            "age": 25,
-                            "phoneNumber": "+1-555-456-7890"
+                            "id": 1,
+                            "name": "สมชาย ใจดี",
+                            "email": "somchai@example.com",
+                            "age": 30,
+                            "phoneNumber": "081-234-5678"
                           }
                         }
                         """
@@ -170,7 +175,7 @@ public class UserController {
         ),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(
             responseCode = "400",
-            description = "Invalid input data",
+            description = "Invalid input data or email already exists",
             content = @Content(
                 mediaType = "application/json",
                 examples = @ExampleObject(
@@ -179,7 +184,7 @@ public class UserController {
                     value = """
                         {
                           "status": "error",
-                          "message": "Validation failed: Email is required",
+                          "message": "Email already exists: somchai@example.com",
                           "data": null
                         }
                         """
@@ -199,26 +204,22 @@ public class UserController {
                     @ExampleObject(
                         name = "Complete User",
                         summary = "Example with all user fields",
-                        description = "This example shows how to create a user with all available fields",
                         value = """
                             {
-                              "id": 3,
-                              "name": "Alice Johnson",
-                              "email": "alice.johnson@example.com",
-                              "age": 25,
-                              "phoneNumber": "+1-555-456-7890"
+                              "name": "สมชาย ใจดี",
+                              "email": "somchai@example.com",
+                              "age": 30,
+                              "phoneNumber": "081-234-5678"
                             }
                             """
                     ),
                     @ExampleObject(
                         name = "Minimal User",
                         summary = "Example with required fields only",
-                        description = "This example shows the minimum required fields to create a user",
                         value = """
                             {
-                              "id": 4,
-                              "name": "Bob Wilson",
-                              "email": "bob.wilson@example.com"
+                              "name": "สมศรี สุขใจ",
+                              "email": "somsri@example.com"
                             }
                             """
                     )
@@ -227,15 +228,22 @@ public class UserController {
         )
         @Valid @RequestBody User user
     ) {
-        // Simulate user creation
-        return ResponseEntity.ok(
-            ApiResponse.success("User created successfully", user)
-        );
+        try {
+            User createdUser = userService.createUser(user);
+            return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success("User created successfully", createdUser));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(ApiResponse.error("Failed to create user: " + e.getMessage()));
+        }
     }
 
     @Operation(
         summary = "Update an existing user",
-        description = "Update user information for an existing user"
+        description = "Update user information for an existing user in SQLite database"
     )
     @ApiResponses(value = {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(
@@ -252,11 +260,29 @@ public class UserController {
                           "message": "User updated successfully",
                           "data": {
                             "id": 1,
-                            "name": "John Updated Doe",
-                            "email": "john.updated@example.com",
+                            "name": "สมชาย ใจดี (แก้ไข)",
+                            "email": "somchai.updated@example.com",
                             "age": 31,
-                            "phoneNumber": "+1-555-123-4567"
+                            "phoneNumber": "081-234-5678"
                           }
+                        }
+                        """
+                )
+            )
+        ),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "404",
+            description = "User not found",
+            content = @Content(
+                mediaType = "application/json",
+                examples = @ExampleObject(
+                    name = "User Not Found",
+                    summary = "Example when user to update is not found",
+                    value = """
+                        {
+                          "status": "error",
+                          "message": "User not found with id: 999",
+                          "data": null
                         }
                         """
                 )
@@ -279,27 +305,39 @@ public class UserController {
                     summary = "Example of user update data",
                     value = """
                         {
-                          "id": 1,
-                          "name": "John Updated Doe",
-                          "email": "john.updated@example.com",
+                          "name": "สมชาย ใจดี (แก้ไข)",
+                          "email": "somchai.updated@example.com",
                           "age": 31,
-                          "phoneNumber": "+1-555-123-4567"
+                          "phoneNumber": "081-234-5678"
                         }
                         """
                 )
             )
         )
-        @Valid @RequestBody User user
+        @Valid @RequestBody User userDetails
     ) {
-        user.setId(id);
-        return ResponseEntity.ok(
-            ApiResponse.success("User updated successfully", user)
-        );
+        try {
+            User updatedUser = userService.updateUser(id, userDetails);
+            return ResponseEntity.ok(
+                ApiResponse.success("User updated successfully", updatedUser)
+            );
+        } catch (RuntimeException e) {
+            if (e.getMessage().contains("not found")) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.error(e.getMessage()));
+            } else {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error(e.getMessage()));
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(ApiResponse.error("Failed to update user: " + e.getMessage()));
+        }
     }
 
     @Operation(
         summary = "Delete a user",
-        description = "Delete a user from the system by their ID"
+        description = "Delete a user from the SQLite database by their ID"
     )
     @ApiResponses(value = {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(
@@ -319,6 +357,24 @@ public class UserController {
                         """
                 )
             )
+        ),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "404",
+            description = "User not found",
+            content = @Content(
+                mediaType = "application/json",
+                examples = @ExampleObject(
+                    name = "User Not Found",
+                    summary = "Example when user to delete is not found",
+                    value = """
+                        {
+                          "status": "error",
+                          "message": "User not found with id: 999",
+                          "data": null
+                        }
+                        """
+                )
+            )
         )
     })
     @DeleteMapping("/{id}")
@@ -329,8 +385,17 @@ public class UserController {
         )
         @PathVariable Long id
     ) {
-        return ResponseEntity.ok(
-            ApiResponse.success("User deleted successfully", null)
-        );
+        try {
+            userService.deleteUser(id);
+            return ResponseEntity.ok(
+                ApiResponse.success("User deleted successfully", null)
+            );
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(ApiResponse.error("Failed to delete user: " + e.getMessage()));
+        }
     }
 }

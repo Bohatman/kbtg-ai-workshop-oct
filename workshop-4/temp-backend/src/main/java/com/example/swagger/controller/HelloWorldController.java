@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/")
+@RequestMapping("/hello")
 @Tag(name = "Hello World", description = "Simple greeting endpoints")
 public class HelloWorldController {
 
