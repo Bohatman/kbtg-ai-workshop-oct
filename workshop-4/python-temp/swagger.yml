@@ -1,4 +1,4 @@
-openapi: 3.1.0
+openapi: 3.0.0
 info:
   title: LBK Points - Transfer API
   version: 1.1.0
@@ -393,7 +393,7 @@ paths:
                   - type: object
                     properties:
                       data:
-                        type: null
+                        type: string
 
   /users/{id}:
     parameters:
